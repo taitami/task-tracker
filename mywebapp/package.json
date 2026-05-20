@@ -7,7 +7,9 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
-    "dev": "node --loader ts-node/esm src/index.ts"
+    "dev": "node --loader ts-node/esm src/index.ts",
+    "migrate": "node --loader ts-node/esm src/migrate.ts",
+    "migrate:prod": "node dist/migrate.js"
   },
   "keywords": [],
   "author": "",
