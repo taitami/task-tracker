@@ -1,0 +1,19 @@
+[Unit]
+Description=My Web App (Task Tracker)
+Requires=mywebapp.socket
+After=network.target mariadb.service mywebapp.socket
+
+[Service]
+Type=simple
+User=app
+
+WorkingDirectory=/opt/mywebapp/mywebapp
+
+ExecStartPre=/usr/bin/node /opt/mywebapp/mywebapp/dist/migrate.js --dbuser=app --dbpass=app_password --dbname=mywebapp_db
+
+ExecStart=/usr/bin/node /opt/mywebapp/mywebapp/dist/index.js --dbuser=app --dbpass=app_password --dbname=mywebapp_db
+NonBlocking=true
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

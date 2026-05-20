@@ -135,6 +135,12 @@ app.get('/', (req: Request, res: Response) => {
     res.send(html);
 });
 
-app.listen(PORT, () => {
-    console.log(`[server]: Server is running at http://localhost:${PORT}`);
-});
+if (process.env.LISTEN_FDS && parseInt(process.env.LISTEN_FDS) > 0) {
+    app.listen({ fd: 3 }, () => {
+        console.log(`[server]: Server is running via Systemd Socket Activation`);
+    });
+} else {
+    app.listen(PORT, () => {
+        console.log(`[server]: Server is running at http://localhost:${PORT}`);
+    });
+}

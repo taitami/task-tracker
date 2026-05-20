@@ -1,0 +1,8 @@
+[Unit]
+Description=Socket for My Web App (Port 5200)
+
+[Socket]
+ListenStream=127.0.0.1:5200
+
+[Install]
+WantedBy=sockets.target
