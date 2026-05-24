@@ -1,0 +1,35 @@
+---
+- name: Install MariaDB and dependencies
+  ansible.builtin.apt:
+    name:
+      - mariadb-server
+      - python3-pymysql
+    state: present
+    update_cache: yes
+
+- name: Configure MariaDB to listen on internal IP
+  ansible.builtin.template:
+    src: bind-address.cnf.j2
+    dest: /etc/mysql/mariadb.conf.d/99-override.cnf
+  notify: restart mariadb
+
+- name: Ensure MariaDB service is running
+  ansible.builtin.systemd:
+    name: mariadb
+    state: started
+    enabled: yes
+
+- name: Create app database
+  community.mysql.mysql_db:
+    name: mywebapp_db
+    state: present
+    login_unix_socket: /run/mysqld/mysqld.sock
+
+- name: Create app user and grant access from worker IP
+  community.mysql.mysql_user:
+    name: app
+    password: app_password
+    host: "{{ hostvars[groups['workers'][0]]['ansible_host'] }}"
+    priv: "mywebapp_db.*:ALL"
+    state: present
+    login_unix_socket: /run/mysqld/mysqld.sock

@@ -1,0 +1,14 @@
+[Unit]
+Description=My Web App
+After=network.target
+
+[Service]
+Type=simple
+User=app
+WorkingDirectory=/opt/mywebapp/mywebapp
+ExecStartPre=/usr/bin/node dist/migrate.js --dbhost={{ hostvars[groups['db'][0]]['ansible_host'] }} --dbuser=app --dbpass=app_password --dbname=mywebapp_db
+ExecStart=/usr/bin/node dist/index.js --dbhost={{ hostvars[groups['db'][0]]['ansible_host'] }} --dbuser=app --dbpass=app_password --dbname=mywebapp_db --port=5200
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

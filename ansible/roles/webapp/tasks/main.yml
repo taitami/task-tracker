@@ -1,0 +1,55 @@
+---
+- name: Install Node.js and npm
+  ansible.builtin.apt:
+    name:
+      - nodejs
+      - npm
+      - git
+    state: present
+    update_cache: yes
+
+- name: Create app system user
+  ansible.builtin.user:
+    name: app
+    system: yes
+    create_home: no
+    shell: /usr/sbin/nologin
+
+- name: Create operator user
+  ansible.builtin.user:
+    name: operator
+    state: present
+    password: "{{ '12345678' | password_hash('sha512') }}"
+    shell: /bin/bash
+
+- name: Setup sudo rules for operator
+  ansible.builtin.copy:
+    content: "operator ALL=(ALL) NOPASSWD: /usr/bin/systemctl start mywebapp, /usr/bin/systemctl stop mywebapp, /usr/bin/systemctl restart mywebapp, /usr/bin/systemctl status mywebapp, /usr/bin/systemctl reload nginx\n"
+    dest: /etc/sudoers.d/operator
+    mode: '0440'
+
+- name: Clone WebApp Repository
+  ansible.builtin.git:
+    repo: 'https://github.com/mykhailov/mywebapp.git' 
+    dest: /opt/mywebapp
+    version: main
+
+- name: Install npm dependencies and build
+  ansible.builtin.shell: |
+    npm install
+    npm run build
+  args:
+    chdir: /opt/mywebapp/mywebapp
+
+- name: Create Systemd Service File
+  ansible.builtin.template:
+    src: mywebapp.service.j2
+    dest: /etc/systemd/system/mywebapp.service
+  notify: restart mywebapp
+
+- name: Enable and start WebApp
+  ansible.builtin.systemd:
+    name: mywebapp
+    state: started
+    enabled: yes
+    daemon_reload: yes

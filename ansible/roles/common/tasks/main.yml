@@ -1,0 +1,24 @@
+---
+- name: Create student user
+  ansible.builtin.user:
+    name: student
+    state: present
+    create_home: yes
+    shell: /bin/bash
+
+- name: Create gradebook file
+  ansible.builtin.copy:
+    content: "16\n"
+    dest: /home/student/gradebook
+    owner: student
+    group: student
+    mode: '0644'
+
+- name: Create teacher user with password
+  ansible.builtin.user:
+    name: teacher
+    state: present
+    password: "{{ '12345678' | password_hash('sha512') }}"
+    groups: sudo
+    append: yes
+    shell: /bin/bash
