@@ -1,19 +1,19 @@
 [Unit]
-Description=My Web App (Task Tracker)
-Requires=mywebapp.socket
-After=network.target mariadb.service mywebapp.socket
+Description=My Web App Docker Container
+After=docker.service
+Requires=docker.service
 
 [Service]
-Type=simple
-User=app
-
-WorkingDirectory=/opt/mywebapp/mywebapp
-
-ExecStartPre=/usr/bin/node /opt/mywebapp/mywebapp/dist/migrate.js --dbuser=app --dbpass=app_password --dbname=mywebapp_db
-
-ExecStart=/usr/bin/node /opt/mywebapp/mywebapp/dist/index.js --dbuser=app --dbpass=app_password --dbname=mywebapp_db
-NonBlocking=true
+TimeoutStartSec=0
 Restart=always
+
+ExecStartPre=-/usr/bin/docker stop mywebapp
+ExecStartPre=-/usr/bin/docker rm mywebapp
+
+ExecStartPre=/usr/bin/docker pull ghcr.io/taitami/mywebapp:stable
+
+ExecStart=/usr/bin/docker run --name mywebapp --network mywebapp_net -p 5200:5200 ghcr.io/taitami/mywebapp:stable
+ExecStop=/usr/bin/docker stop mywebapp
 
 [Install]
 WantedBy=multi-user.target

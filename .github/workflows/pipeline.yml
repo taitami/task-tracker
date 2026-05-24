@@ -1,0 +1,103 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ "main" ]
+    tags: [ "v*.*.*" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with: { node-version: 22 }
+        
+      - name: Install dependencies
+        run: cd mywebapp && npm ci
+
+      - name: Run ESLint
+        run: cd mywebapp && npm run lint
+
+      - name: Run Hadolint (Dockerfile analysis)
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: mywebapp/Dockerfile
+
+      - name: Run Shellcheck
+        uses: ludeeus/action-shellcheck@master
+
+      - name: Run Tests & Check Coverage (>40%)
+        run: cd mywebapp && npm run coverage
+
+      - name: Upload Coverage Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: mywebapp/coverage/
+
+  build-and-push:
+    needs: lint-and-test
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Extract Docker metadata & tags
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}/mywebapp
+          tags: |
+            type=ref,event=branch
+            type=sha
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=ref,event=tag
+            type=raw,value=stable,enable=${{ startsWith(github.ref, 'refs/tags/') }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./mywebapp
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+  deploy-and-verify:
+    needs: build-and-push
+    if: startsWith(github.ref, 'refs/tags/') 
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to Target Node
+        env:
+          TARGET_IP: ${{ secrets.TARGET_IP }}
+          TARGET_USER: ${{ secrets.TARGET_USER }}
+          SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          echo "$SSH_KEY" > key.pem
+          chmod 600 key.pem
+          # Копіюємо unit-файл та скрипти на Target Node
+          scp -i key.pem -o StrictHostKeyChecking=no configs/mywebapp-docker.service scripts/deploy_target.sh $TARGET_USER@$TARGET_IP:/tmp/
+          # Виконуємо розгортання
+          ssh -i key.pem -o StrictHostKeyChecking=no $TARGET_USER@$TARGET_IP "sudo bash /tmp/deploy_target.sh"
+          
+      - name: Verify Deployment
+        env:
+          TARGET_IP: ${{ secrets.TARGET_IP }}
+        run: bash scripts/verify.sh $TARGET_IP

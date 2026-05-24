@@ -2,28 +2,29 @@
   "name": "mywebapp",
   "version": "1.0.0",
   "type": "module",
-  "description": "",
-  "main": "index.js",
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
     "dev": "node --loader ts-node/esm src/index.ts",
-    "migrate": "node --loader ts-node/esm src/migrate.ts",
-    "migrate:prod": "node dist/migrate.js"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "dependencies": {
-    "express": "^5.2.1",
-    "mariadb": "^3.5.2",
-    "minimist": "^1.2.8"
+    "lint": "eslint src/**/*.ts",
+    "test": "vitest run",
+    "coverage": "vitest run --coverage"
   },
   "devDependencies": {
-    "@types/express": "^5.0.6",
+    "@types/express": "^5.0.0",
     "@types/minimist": "^1.2.5",
-    "@types/node": "^25.9.1",
+    "@types/node": "^22.0.0",
+    "@types/supertest": "^6.0.2",
+    "@vitest/coverage-v8": "^2.1.0",
+    "eslint": "^9.0.0",
+    "supertest": "^7.0.0",
     "ts-node": "^10.9.2",
-    "typescript": "^6.0.3"
+    "typescript": "^5.7.0",
+    "vitest": "^2.1.0"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "mariadb": "^3.4.0",
+    "minimist": "^1.2.8"
   }
 }
