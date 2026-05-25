@@ -1,19 +1,15 @@
 [Unit]
-Description=My Web App Docker Container
-After=docker.service
+Description=MyWebApp Node.js Application Container
+After=docker.service mariadb.service
 Requires=docker.service
 
 [Service]
 TimeoutStartSec=0
 Restart=always
+ExecStartPre=-/usr/bin/docker stop mywebapp-app
+ExecStartPre=-/usr/bin/docker rm mywebapp-app
 
-ExecStartPre=-/usr/bin/docker stop mywebapp
-ExecStartPre=-/usr/bin/docker rm mywebapp
-
-ExecStartPre=/usr/bin/docker pull ghcr.io/taitami/mywebapp:stable
-
-ExecStart=/usr/bin/docker run --name mywebapp --network mywebapp_net -p 5200:5200 ghcr.io/taitami/mywebapp:stable
-ExecStop=/usr/bin/docker stop mywebapp
+ExecStart=/usr/bin/docker run --name mywebapp-app -p 5200:5200 --add-host=db:127.0.0.1 ghcr.io/taitami/task-tracker/mywebapp:latest
 
 [Install]
 WantedBy=multi-user.target
