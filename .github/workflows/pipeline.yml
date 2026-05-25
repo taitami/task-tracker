@@ -84,20 +84,40 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Deploy to Target Node
+      - name: Deploy Container to Target Node
         env:
           TARGET_IP: ${{ secrets.TARGET_IP }}
           TARGET_USER: ${{ secrets.TARGET_USER }}
           SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          IMAGE_NAME: ghcr.io/${{ github.repository }}/mywebapp:latest
         run: |
+          # Записуємо приватний SSH-ключ у тимчасовий файл і виставляємо права безпеки
           echo "$SSH_KEY" > key.pem
           chmod 600 key.pem
-          # Копіюємо unit-файл та скрипти на Target Node
-          scp -i key.pem -o StrictHostKeyChecking=no configs/mywebapp-docker.service scripts/deploy_target.sh $TARGET_USER@$TARGET_IP:/tmp/
-          # Виконуємо розгортання
-          ssh -i key.pem -o StrictHostKeyChecking=no $TARGET_USER@$TARGET_IP "sudo bash /tmp/deploy_target.sh"
+          
+          # Підключаємося до Target Node, авторизуємо Docker у GHCR, чистимо старий контейнер і запускаємо новий
+          ssh -i key.pem -o StrictHostKeyChecking=no $TARGET_USER@$TARGET_IP "
+            sudo docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }} && \
+            sudo docker stop mywebapp-app || true && \
+            sudo docker rm mywebapp-app || true && \
+            sudo docker run -d --name mywebapp-app -p 5200:3000 --restart always $IMAGE_NAME
+          "
+          
+          # Прибираємо за собою ключ
+          rm -f key.pem
           
       - name: Verify Deployment
         env:
           TARGET_IP: ${{ secrets.TARGET_IP }}
-        run: bash scripts/verify.sh $TARGET_IP
+        run: |
+          echo "Очікуємо запуск контейнера..."
+          sleep 5
+          
+          # Перевіряємо доступність веб-сервера (корінь сайту через Nginx)
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://$TARGET_IP/)
+          if [ "$STATUS" -eq 200 ] || [ "$STATUS" -eq 304 ]; then
+              echo "✅ Деплой успішний! Сервер повернув статус $STATUS"
+          else
+              echo "❌ Помилка! Сервер повернув статус $STATUS"
+              exit 1
+          fi
