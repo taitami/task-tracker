@@ -11,6 +11,9 @@ on:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -49,11 +52,11 @@ jobs:
           TARGET_USER: ${{ secrets.TARGET_USER }}
           SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
         run: |
-          # 1. Записуємо приватний SSH-ключ у тимчасовий файл і виставляємо права
+          # 1. Записуємо виправлений приватний SSH-ключ у тимчасовий файл
           echo "$SSH_KEY" > key.pem
           chmod 600 key.pem
           
-          # 2. Підключаємося до Target Node, авторизуємо Docker, чистимо старий контейнер і запускаємо новий
+          # 2. Підключаємося, чистимо старий контейнер та запускаємо новий із прокинутим хостом бази
           ssh -i key.pem -o StrictHostKeyChecking=no $TARGET_USER@$TARGET_IP "
             sudo docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }} && \
             sudo docker stop mywebapp-app || true && \
@@ -66,7 +69,7 @@ jobs:
               ghcr.io/${{ github.repository }}/mywebapp:latest
           "
           
-          # 3. Прибираємо за собою ключ на ранері
+          # 3. Видаляємо тимчасовий ключ на ранері після завершення деплою
           rm -f key.pem
           
       - name: Verify Deployment
