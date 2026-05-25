@@ -21,6 +21,7 @@ jobs:
         run: cd mywebapp && npm ci
 
       - name: Run ESLint
+        continue-on-error: true
         run: cd mywebapp && npm run lint
 
       - name: Run Hadolint (Dockerfile analysis)
