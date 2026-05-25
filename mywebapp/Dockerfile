@@ -19,5 +19,4 @@ COPY --from=builder /app/dist ./dist
 
 EXPOSE 5200
 
-CMD node dist/migrate.js --dbhost=db --dbuser=app --dbpass=app_password --dbname=mywebapp_db && \
-    node dist/index.js --dbhost=db --dbuser=app --dbpass=app_password --dbname=mywebapp_db --port=5200
+CMD ["sh", "-c", "node dist/migrate.js --dbhost=db --dbuser=app --dbpass=app_password --dbname=mywebapp_db && node dist/index.js --dbhost=db --dbuser=app --dbpass=app_password --dbname=mywebapp_db --port=5200"]
