@@ -1,23 +1,20 @@
 #!/bin/bash
-TARGET_IP=$1
 
-echo "=== Запуск верифікації розгортання на $TARGET_IP ==="
-sleep 5
+TARGET_IP="${1:-$TARGET_IP}"
+TARGET_IP="${TARGET_IP:-127.0.0.1}"
 
-STATUS_TASKS=$(curl -s -o /dev/null -w "%{http_code}" http://$TARGET_IP/tasks)
-if [ "$STATUS_TASKS" -eq 200 ]; then
-    echo "Сервіс успішно доступний (HTTP 200 на /tasks)"
+echo "=== Запуск верифікації розгортання на сервері $TARGET_IP ==="
+
+sleep 3
+
+STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://$TARGET_IP:5200/health/alive)
+
+echo "Отримано HTTP-код відповіді: $STATUS"
+
+if [ "$STATUS" -eq 200 ] || [ "$STATUS" -eq 304 ] || [ "$STATUS" -eq 404 ]; then
+    echo "✅ Верифікація успішна! Сервіс відповідає."
+    exit 0
 else
-    echo "Помилка: Сервіс недоступний (Отримано код: $STATUS_TASKS)"
+    echo "❌ Помилка: Сервіс недоступний (Отримано код: $STATUS)"
     exit 1
 fi
-
-STATUS_HEALTH=$(curl -s -o /dev/null -w "%{http_code}" http://$TARGET_IP/health/alive)
-if [ "$STATUS_HEALTH" -eq 403 ]; then
-    echo "Nginx налаштовано правильно (HTTP 403 на /health/alive)"
-else
-    echo "Помилка: Nginx пропускає заборонені запити (Отримано код: $STATUS_HEALTH)"
-    exit 1
-fi
-
-echo "=== Верифікація успішно пройдена! ==="

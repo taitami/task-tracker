@@ -127,4 +127,5 @@ jobs:
           TARGET_IP: ${{ secrets.TARGET_IP }}
         run: |
           chmod +x ./scripts/verify.sh
-          ./scripts/verify.sh
+          # Передаємо секретну IP-адресу аргументом у скрипт
+          ./scripts/verify.sh "$TARGET_IP"
