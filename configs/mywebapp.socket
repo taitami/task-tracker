@@ -1,8 +1,10 @@
 [Unit]
-Description=Socket for My Web App (Port 5200)
+Description=Socket Activation for MyWebApp
 
 [Socket]
+
 ListenStream=127.0.0.1:5200
+KeepAlive=true
 
 [Install]
 WantedBy=sockets.target

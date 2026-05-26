@@ -6,10 +6,11 @@ REPO_DIR=$(pwd)
 
 echo "=== 1. Оновлення та встановлення пакетів ==="
 apt-get update
-apt-get install -y mariadb-server nginx nodejs npm curl
+apt-get install -y mariadb-server nginx nodejs npm curl git
 
 echo "=== 2. Створення користувачів ==="
-useradd -r -s /bin/false app || true
+
+useradd -r -m -d /var/www/mywebapp -s /bin/false app || true
 useradd -m -s /bin/bash student || true
 useradd -m -s /bin/bash teacher || true
 useradd -m -s /bin/bash operator || true
@@ -45,18 +46,38 @@ chmod 644 /home/student/gradebook
 echo "=== 6. Блокування дефолтного користувача ubuntu ==="
 usermod -L ubuntu || true
 
-echo "=== 7. Копіювання конфігів Systemd та Nginx ==="
-cp $REPO_DIR/configs/mywebapp.socket /etc/systemd/system/
-cp $REPO_DIR/configs/mywebapp.service /etc/systemd/system/
-cp $REPO_DIR/configs/mywebapp.conf /etc/nginx/sites-available/
+echo "=== 7. Збірка та підготовка веб-застосунку ==="
+
+cd $REPO_DIR/mywebapp
+npm ci
+npm run build
+
+cp -r dist package.json package-lock.json node_modules /var/www/mywebapp/
+
+chown -r app:app /var/www/mywebapp
+
+echo "=== 8. Копіювання конфігів Systemd та Nginx ==="
+cd $REPO_DIR
+cp configs/mywebapp.socket /etc/systemd/system/
+cp configs/mywebapp.service /etc/systemd/system/
+
+if [ -f "docker/nginx/default.conf" ]; then
+    cp docker/nginx/default.conf /etc/nginx/sites-available/mywebapp.conf
+elif [ -f "configs/mywebapp.conf" ]; then
+    cp configs/mywebapp.conf /etc/nginx/sites-available/mywebapp.conf
+fi
 
 ln -sf /etc/nginx/sites-available/mywebapp.conf /etc/nginx/sites-enabled/
 rm -f /etc/nginx/sites-enabled/default
 
-echo "=== 8. Запуск сервісів ==="
+echo "=== 9. Запуск сервісів ==="
 systemctl daemon-reload
 systemctl enable mywebapp.socket
 systemctl start mywebapp.socket
+
+systemctl enable mywebapp.service
+systemctl restart mywebapp.service
+
 systemctl restart nginx
 
 echo "=== Автоматизація успішно завершена! ==="

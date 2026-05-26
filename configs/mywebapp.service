@@ -1,15 +1,18 @@
 [Unit]
-Description=MyWebApp Node.js Application Container
-After=docker.service mariadb.service
-Requires=docker.service
+Description=MyWebApp Task Tracker Service
+After=network.target mariadb.service
+Requires=mywebapp.socket
 
 [Service]
-TimeoutStartSec=0
-Restart=always
-ExecStartPre=-/usr/bin/docker stop mywebapp-app
-ExecStartPre=-/usr/bin/docker rm mywebapp-app
+Type=simple
 
-ExecStart=/usr/bin/docker run --name mywebapp-app -p 5200:5200 --add-host=db:127.0.0.1 ghcr.io/taitami/task-tracker/mywebapp:latest
+User=app
+WorkingDirectory=/var/www/mywebapp
+
+ExecStartPre=/usr/bin/node dist/migrate.js
+
+ExecStart=/usr/bin/node dist/index.js --port=5200 --dbhost=127.0.0.1 --dbuser=app --dbpass=app_password --dbname=mywebapp_db
+Restart=always
 
 [Install]
 WantedBy=multi-user.target
